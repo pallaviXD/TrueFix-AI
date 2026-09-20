@@ -15,3 +15,7 @@ export const getLoginUrl = () => {
 
   return url.toString();
 };
+
+export const startLogin = () => {
+  window.location.href = getLoginUrl();
+};

@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1789826740289,
+      "tag": "0000_vengeful_cardiac",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1789828066198,
+      "tag": "0001_little_naoko",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1789830081274,
+      "tag": "0002_dry_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1789832107863,
+      "tag": "0003_powerful_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1789832700132,
+      "tag": "0004_slippery_greymalkin",
+      "breakpoints": true
+    }
+  ]
+}

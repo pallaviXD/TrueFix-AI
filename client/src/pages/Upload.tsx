@@ -1,15 +1,18 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Camera, Check, ChevronRight, ImagePlus, LocateFixed, MapPin, Pencil, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Camera, Check, ChevronRight, ImagePlus, LocateFixed, MapPin, Mic, Pencil, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
 import { api, images } from "@/lib/api";
+import { canRouteReport, detectWardFromCoordinates } from "../../../shared/truefix";
 import { EmptyNotice, ErrorNotice, LoadingSteps, PageIntro, SectionLabel, TrustNote } from "@/App";
+import { AudioEvidence, type AudioData } from "@/components/AudioEvidence";
 
-const steps = ["Analyzing photo…", "Detecting category…", "Checking nearby duplicates…", "Drafting complaint…"];
+const steps = ["Analyzing photo & voice note…", "Running Whisper AI speech-to-text…", "Checking nearby duplicates…", "Drafting bilingual complaint…"];
 
 export default function Upload() {
   const [, navigate] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [audioData, setAudioData] = useState<AudioData | null>(null);
   const [caption, setCaption] = useState("");
   const [location, setReportLocation] = useState("12th Main Road, Indiranagar");
   const [coordinates, setCoordinates] = useState({ lat: 12.9784, lng: 77.6408 });
@@ -20,10 +23,38 @@ export default function Upload() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
 
+  const acquireLocation = () => {
+    setLocating(true);
+    if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCoordinates({ lat, lng });
+          const ward = detectWardFromCoordinates(lat, lng);
+          setReportLocation(`GPS (${lat.toFixed(4)}, ${lng.toFixed(4)}) · ${ward}`);
+          setLocating(false);
+        },
+        (err) => {
+          console.warn("[Geolocation] Browser location unavailable:", err.message);
+          setLocating(false);
+          setEditingLocation(true);
+        },
+        { timeout: 7000, enableHighAccuracy: true }
+      );
+    } else {
+      setLocating(false);
+      setEditingLocation(true);
+    }
+  };
+
   useEffect(() => {
-    const timer = window.setTimeout(() => setLocating(false), 850);
-    return () => window.clearTimeout(timer);
+    acquireLocation();
   }, []);
+
+  const useCurrentLocation = () => {
+    acquireLocation();
+  };
 
   useEffect(() => {
     if (!loading) return;
@@ -49,15 +80,6 @@ export default function Upload() {
     }
   };
 
-  const useCurrentLocation = () => {
-    setLocating(true);
-    window.setTimeout(() => {
-      setReportLocation("12th Main Road, Indiranagar");
-      setCoordinates({ lat: 12.9784, lng: 77.6408 });
-      setLocating(false);
-    }, 620);
-  };
-
   const saveManualLocation = () => {
     if (locationDraft.trim()) setReportLocation(locationDraft.trim());
     setEditingLocation(false);
@@ -68,11 +90,33 @@ export default function Upload() {
       setError("Add a photo first. It is the evidence that keeps this complaint accountable.");
       return;
     }
+
+    const isPothole = /pothole|road|hole|ಗುಂಡಿ/i.test(caption);
+    const validation = canRouteReport({
+      category: isPothole ? "Pothole" : "Garbage accumulation",
+      durationDays: 1,
+      location,
+      imageQuality: 0.85,
+    });
+    if (!validation.allowed) {
+      setError(validation.reason);
+      return;
+    }
+
     setError("");
     setLoadingStep(0);
     setLoading(true);
     try {
-      const complaint = await api.submitReport({ photo, caption, location, coordinates });
+      const complaint = await api.submitReport({
+        photo,
+        caption,
+        location,
+        coordinates,
+        audioUrl: audioData?.url,
+        audioDuration: audioData?.duration,
+        audioTranscript: audioData?.transcript,
+        audioTranscriptKannada: audioData?.transcriptKannada,
+      });
       navigate(`/complaint/${complaint.id}`);
     } catch {
       setLoading(false);
@@ -101,6 +145,28 @@ export default function Upload() {
       <PageIntro eyebrow="Report an issue" title="Make it visible. Make it fixable.">
         Snap a clear photo of a garbage pile or pothole. We’ll turn it into a complaint you can follow and verify.
       </PageIntro>
+
+      {/* Offline / Demo Disclosure Banner */}
+      <div
+        style={{
+          background: "rgba(16, 185, 129, 0.08)",
+          border: "1px solid rgba(16, 185, 129, 0.25)",
+          borderRadius: "10px",
+          padding: "10px 14px",
+          fontSize: "12px",
+          color: "#134e40",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "20px",
+          lineHeight: "1.4",
+        }}
+      >
+        <span style={{ fontSize: "14px" }}>ℹ️</span>
+        <span>
+          <strong>Demo Mode:</strong> Using local offline heuristics for voice transcription and computer vision. In production, these route to Amazon Transcribe and Amazon Rekognition.
+        </span>
+      </div>
 
       <div className="upload-layout">
         <section className="paper-card upload-card">
@@ -216,10 +282,31 @@ export default function Upload() {
         </section>
 
         <section className="paper-card details-card">
-          <SectionLabel><Pencil size={14} /> 02 / Add context <span className="optional">Optional</span></SectionLabel>
-          <label className="field-label" htmlFor="caption">What should the team know?</label>
-          <textarea id="caption" className="text-field text-area" value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="e.g. This has been here since Monday and blocks the footpath." rows={3} />
-          <div className="field-count">{caption.length}/240</div>
+          <SectionLabel><Mic size={14} /> 02 / Voice note & description <span className="optional">Optional</span></SectionLabel>
+          <p style={{ fontSize: "12.5px", color: "var(--ink-soft)", margin: "0 0 12px", lineHeight: "1.5" }}>
+            Speak in Kannada, English, or Hindi. Whisper AI will transcribe your voice into structured evidence.
+          </p>
+
+          <AudioEvidence
+            value={audioData}
+            onChange={setAudioData}
+            onApplyTranscript={(transcriptText) => {
+              setCaption((prev) => (prev ? `${prev}\n${transcriptText}` : transcriptText));
+            }}
+          />
+
+          <div style={{ marginTop: "16px" }}>
+            <label className="field-label" htmlFor="caption">What should the team know? (Optional description)</label>
+            <textarea
+              id="caption"
+              className="text-field text-area"
+              value={caption}
+              onChange={(event) => setCaption(event.target.value)}
+              placeholder="e.g. This has been here since Monday and blocks the footpath."
+              rows={3}
+            />
+            <div className="field-count">{caption.length}/240</div>
+          </div>
         </section>
 
         <section className="paper-card details-card">

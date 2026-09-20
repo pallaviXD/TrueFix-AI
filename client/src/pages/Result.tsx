@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, Flag, MapPin, Route, ShieldCheck, Sparkles, Trash2, Wrench } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, Flag, MapPin, Mic, Route, ShieldCheck, Sparkles, Trash2, Wrench } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { api, Complaint } from "@/lib/api";
 import { ErrorNotice, LoadingSteps, PageIntro, SectionLabel, TrustNote } from "@/App";
+import { AudioPlayer } from "@/components/AudioPlayer";
 
 const categoryInfo = {
   garbage: { label: "Garbage", icon: Trash2 },
@@ -66,6 +67,19 @@ export default function Result() {
         <div className="ai-note"><Sparkles size={14} /> Drafted from your photo and note. You can dispute the resolution later if the fix doesn’t hold.</div>
       </section>
 
+      {complaint.audioUrl ? (
+        <section className="paper-card audio-evidence-card" style={{ padding: "18px 20px" }}>
+          <SectionLabel><Mic size={14} /> Voice note evidence</SectionLabel>
+          <AudioPlayer
+            url={complaint.audioUrl}
+            duration={complaint.audioDuration || 8}
+            transcript={complaint.audioTranscript}
+            transcriptKannada={complaint.audioTranscriptKannada || complaint.titleKannada}
+            title="Citizen Voice Note"
+          />
+        </section>
+      ) : null}
+
       <section className="paper-card routing-card">
         <SectionLabel><Route size={14} /> Civic routing</SectionLabel>
         <div className="routing-row"><div className="routing-icon"><CategoryIcon size={17} /></div><div><span className="mini-label">CATEGORY</span><strong>{info.label}</strong></div></div>
@@ -81,6 +95,7 @@ export default function Result() {
 
       <div className="result-actions">
         <Link href={`/resolution/${complaint.id}`} className={isResolved ? "secondary-button" : "primary-button"}>{isResolved ? "Review resolution" : "I’ll verify the fix"}<ArrowRight size={15} /></Link>
+        <Link href={`/track?report=${complaint.trackingId}`} className="secondary-button">Track public status</Link>
         <Link href="/dashboard" className="text-link">View all reports <ChevronRight size={15} /></Link>
       </div>
       <TrustNote>Demo data is stored in a single mock API client so the real API Gateway can replace it later without changing these screens.</TrustNote>

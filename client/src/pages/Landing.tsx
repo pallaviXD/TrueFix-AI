@@ -1,25 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Activity,
   AlertTriangle,
   ArrowDown,
   ArrowRight,
+  Bot,
   BrainCircuit,
   Camera,
   Check,
   CheckCircle2,
   ChevronRight,
+  Download,
   GitBranch,
   Languages,
+  MessageSquare,
+  Mic,
   Route,
   ScanSearch,
+  Search,
   ShieldCheck,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 import { images } from "@/lib/api";
-import { useAwsDrawer } from "@/App";
+import { useAwsDrawer, useCivicAi } from "@/App";
 import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
 import { CivicTicker } from "@/components/CivicTicker";
 
@@ -219,7 +225,7 @@ const pipeline = [
 
 function LandingLogo() {
   return (
-    <div className="landing-logo">
+    <Link href="/" className="landing-logo" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
       <img
         src="/logo.png"
         alt="NammaFix AI"
@@ -230,7 +236,7 @@ function LandingLogo() {
           display: "block",
         }}
       />
-    </div>
+    </Link>
   );
 }
 
@@ -251,14 +257,255 @@ function AwsMark({
   );
 }
 
+type DemoComplaint = {
+  id: string;
+  trackingId: string;
+  shortTitle: string;
+  photo: string;
+  progressPercent: string;
+  complete: Record<Language, string>;
+  complaint: Record<Language, string>;
+  category: Record<Language, string>;
+  location: Record<Language, string>;
+  caption: Record<Language, string>;
+  classifiedDetail: Record<Language, string>;
+  duplicateDetail: Record<Language, string>;
+  routedDetail: Record<Language, string>;
+};
+
+const DEMO_COMPLAINTS: DemoComplaint[] = [
+  {
+    id: "0042",
+    trackingId: "NM24 0042",
+    shortTitle: "Garbage",
+    photo: "/evidence/garbage-before.jpg",
+    progressPercent: "75%",
+    complete: {
+      en: "3 of 4 complete",
+      kn: "4ರಲ್ಲಿ 3 ಪೂರ್ಣ",
+      hi: "4 में से 3 पूरे",
+    },
+    complaint: {
+      en: "Complaint 0042",
+      kn: "ದೂರು 0042",
+      hi: "शिकायत 0042",
+    },
+    category: {
+      en: "GARBAGE PILE",
+      kn: "ಕಸದ ರಾಶಿ",
+      hi: "कचरे का ढेर",
+    },
+    location: {
+      en: "MS Palya, Bengaluru",
+      kn: "ಎಂ ಎಸ್ ಪಾಳ್ಯ, ಬೆಂಗಳೂರು",
+      hi: "एम एस पाल्या, बेंगलुरु",
+    },
+    caption: {
+      en: "Overflowing waste collection point near the main road",
+      kn: "ಮುಖ್ಯ ರಸ್ತೆಯ ಬಳಿಯ ತುಂಬಿ ಹರಿಯುತ್ತಿರುವ ಕಸ ಸಂಗ್ರಹ ಸ್ಥಳ",
+      hi: "मुख्य सड़क के पास कचरा संग्रह केंद्र भर गया है",
+    },
+    classifiedDetail: {
+      en: "Garbage · 96% confidence",
+      kn: "ಕಸ · 96% ನಂಬಿಕೆ",
+      hi: "कचरा · 96% भरोसा",
+    },
+    duplicateDetail: {
+      en: "One nearby report flagged",
+      kn: "ಹತ್ತಿರದ ಒಂದು ವರದಿ ಕಂಡುಬಂದಿದೆ",
+      hi: "पास की एक रिपोर्ट मिली",
+    },
+    routedDetail: {
+      en: "151 · Solid Waste Management",
+      kn: "151 · ಘನ ತ್ಯಾಜ್ಯ ನಿರ್ವಹಣೆ",
+      hi: "151 · ठोस कचरा प्रबंधन",
+    },
+  },
+  {
+    id: "0108",
+    trackingId: "NM24 0108",
+    shortTitle: "Pothole",
+    photo: "/evidence/pothole-before.jpg",
+    progressPercent: "75%",
+    complete: {
+      en: "3 of 4 complete",
+      kn: "4ರಲ್ಲಿ 3 ಪೂರ್ಣ",
+      hi: "4 में से 3 पूरे",
+    },
+    complaint: {
+      en: "Complaint 0108",
+      kn: "ದೂರು 0108",
+      hi: "शिकायत 0108",
+    },
+    category: {
+      en: "POTHOLE HAZARD",
+      kn: "ರಸ್ತೆ ಗುಂಡಿ ಅಪಾಯ",
+      hi: "सड़क गड्ढा खतरा",
+    },
+    location: {
+      en: "80 Feet Road, Koramangala",
+      kn: "80 ಅಡಿ ರಸ್ತೆ, ಕೋರಮಂಗಲ",
+      hi: "80 फीट रोड, कोरमंगला",
+    },
+    caption: {
+      en: "Deep crater on asphalt causing severe two-wheeler skid hazard",
+      kn: "ದ್ವಿಚಕ್ರ ವಾಹನಗಳಿಗೆ ಅಪಾಯ ಉಂಟುಮಾಡುತ್ತಿರುವ ಆಳವಾದ ರಸ್ತೆ ಗುಂಡಿ",
+      hi: "दोपहिया वाहनों के लिए खतरनाक गहरा गड्ढा",
+    },
+    classifiedDetail: {
+      en: "Road Pothole · 98% confidence",
+      kn: "ರಸ್ತೆ ಗುಂಡಿ · 98% ನಂಬಿಕೆ",
+      hi: "सड़क गड्ढा · 98% भरोसा",
+    },
+    duplicateDetail: {
+      en: "No duplicates within 200m",
+      kn: "200 ಮೀಟರ್ ಒಳಗೆ ಯಾವುದೇ ನಕಲು ಇಲ್ಲ",
+      hi: "200 मीटर के भीतर कोई डुप्लीकेट नहीं",
+    },
+    routedDetail: {
+      en: "150 · BBMP Road Infrastructure",
+      kn: "150 · ರಸ್ತೆ ಮೂಲಸೌಕರ್ಯ ವಿಭಾಗ",
+      hi: "150 · सड़क अवसंरचना विभाग",
+    },
+  },
+  {
+    id: "0233",
+    trackingId: "NM24 0233",
+    shortTitle: "Streetlight",
+    photo: "/evidence/streetlight.jpg",
+    progressPercent: "100%",
+    complete: {
+      en: "4 of 4 complete · Dispatched",
+      kn: "4ರಲ್ಲಿ 4 ಪೂರ್ಣ · ಹೊರಡಿಸಲಾಗಿದೆ",
+      hi: "4 में से 4 पूरे · रवाना",
+    },
+    complaint: {
+      en: "Complaint 0233",
+      kn: "ದೂರು 0233",
+      hi: "शिकायत 0233",
+    },
+    category: {
+      en: "STREETLIGHT OUT",
+      kn: "ಬೀದಿ ದೀಪ ದುರಸ್ತಿ",
+      hi: "स्ट्रीटलाइट बंद",
+    },
+    location: {
+      en: "14th Cross, Malleshwaram",
+      kn: "14ನೇ ಕ್ರಾಸ್, ಮಲ್ಲೇಶ್ವರಂ",
+      hi: "14वां क्रॉस, मल्लेश्वरम",
+    },
+    caption: {
+      en: "Dark residential stretch, 3 unlit LED street poles creating safety issue",
+      kn: "ಬೆಳಕಿಲ್ಲದ 3 ಎಲ್‌ಇಡಿ ಕಂಬಗಳು, ಕತ್ತಲಾದ ವಸತಿ ಪ್ರದೇಶ",
+      hi: "अंधेरी सड़क, 3 स्ट्रीटलाइट खराब होने से सुरक्षा खतरा",
+    },
+    classifiedDetail: {
+      en: "Electrical · 95% confidence",
+      kn: "ವಿದ್ಯುತ್ ವಿಭಾಗ · 95% ನಂಬಿಕೆ",
+      hi: "विद्युत · 95% भरोसा",
+    },
+    duplicateDetail: {
+      en: "Merged with BESCOM Ticket #7741",
+      kn: "ಬೆಸ್ಕಾಂ ಟಿಕೆಟ್ #7741 ರೊಂದಿಗೆ ವಿಲೀನ",
+      hi: "बेस्कॉम टिकट #7741 के साथ मर्ज किया गया",
+    },
+    routedDetail: {
+      en: "045 · BESCOM & Electrical Cell",
+      kn: "045 · ಬೆಸ್ಕಾಂ ಮತ್ತು ವಿದ್ಯುತ್ ಘಟಕ",
+      hi: "045 · बेस्कॉम और विद्युत सेल",
+    },
+  },
+  {
+    id: "0319",
+    trackingId: "NM24 0319",
+    shortTitle: "Water Leak",
+    photo: "/evidence/waterleak.jpg",
+    progressPercent: "75%",
+    complete: {
+      en: "3 of 4 complete",
+      kn: "4ರಲ್ಲಿ 3 ಪೂರ್ಣ",
+      hi: "4 में से 3 पूरे",
+    },
+    complaint: {
+      en: "Complaint 0319",
+      kn: "ದೂರು 0319",
+      hi: "शिकायत 0319",
+    },
+    category: {
+      en: "WATER MAIN LEAK",
+      kn: "ಕುಡಿಯುವ ನೀರು ಸೋರಿಕೆ",
+      hi: "पानी पाइपलाइन रिसाव",
+    },
+    location: {
+      en: "CMH Road, Indiranagar",
+      kn: "ಸಿಎಂಎಚ್ ರಸ್ತೆ, ಇಂದಿರಾನಗರ",
+      hi: "सीएमएच रोड, इंदिरानगर",
+    },
+    caption: {
+      en: "Pressurized drinking water pipeline burst, flooding roadway",
+      kn: "ಕುಡಿಯುವ ನೀರಿನ ಪೈಪ್ ಒಡೆದು ರಸ್ತೆಯ ಮೇಲೆ ಹರಿಯುತ್ತಿದೆ",
+      hi: "मुख्य पेयजल पाइपलाइन फटने से सड़क पर पानी भर गया",
+    },
+    classifiedDetail: {
+      en: "BWSSB Water Main · 97% confidence",
+      kn: "ನೀರು ಸರಬರಾಜು · 97% ನಂಬಿಕೆ",
+      hi: "जल रिसाव · 97% भरोसा",
+    },
+    duplicateDetail: {
+      en: "Urgent severity alert routed to engineer",
+      kn: "ತುರ್ತು ಎಚ್ಚರಿಕೆ ಇಂಜಿನಿಯರ್‌ಗೆ ರವಾನೆ",
+      hi: "फील्ड इंजीनियर को तत्काल अलर्ट भेजा गया",
+    },
+    routedDetail: {
+      en: "112 · BWSSB Water Supply Unit",
+      kn: "112 · ಬಿಡಬ್ಲ್ಯೂಎಸ್ಎಸ್‌ಬಿ ನೀರು ಸರಬರಾಜು",
+      hi: "112 · बीडब्ल्यूएसएसबी जल आपूर्ति",
+    },
+  },
+];
+
 export default function Landing() {
   const [incidentReady, setIncidentReady] = useState(false);
   const [enteringApp, setEnteringApp] = useState(false);
   const [language, setLanguage] = useState<Language>("en");
   const [proofScenario, setProofScenario] = useState<"pothole" | "garbage">("pothole");
+  const [demoIndex, setDemoIndex] = useState(0);
+  const [isDemoFading, setIsDemoFading] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIsDemoFading(true);
+      setTimeout(() => {
+        setDemoIndex((prev) => (prev + 1) % DEMO_COMPLAINTS.length);
+        setIsDemoFading(false);
+      }, 260);
+    }, 20000);
+
+    return () => clearInterval(timer);
+  }, [demoIndex]);
+
+  const selectDemoComplaint = (idx: number) => {
+    if (idx === demoIndex) return;
+    setIsDemoFading(true);
+    setTimeout(() => {
+      setDemoIndex(idx);
+      setIsDemoFading(false);
+    }, 260);
+  };
+
+  const activeDemo = DEMO_COMPLAINTS[demoIndex];
   const { openDrawer } = useAwsDrawer();
+  const { openAi } = useCivicAi();
   const [, navigate] = useLocation();
   const copy = translations[language];
+
+  const goTo = (path: string) => (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    navigate(path);
+  };
 
   const enterDashboard = () => {
     if (enteringApp) return;
@@ -288,7 +535,41 @@ export default function Landing() {
         </div>
         <header className="landing-header">
           <LandingLogo />
+
+          <nav className="desktop-landing-nav">
+            <Link
+              href="/upload"
+              className="landing-nav-link"
+              onClick={goTo("/upload")}
+            >
+              <Camera size={14} /> Report Issue
+            </Link>
+            <Link
+              href="/track"
+              className="landing-nav-link"
+              onClick={goTo("/track")}
+            >
+              <Search size={14} /> Track Status
+            </Link>
+            <Link
+              href="/dashboard"
+              className="landing-nav-link"
+              onClick={goTo("/dashboard")}
+            >
+              <TrendingUp size={14} /> Trends & Dashboard
+            </Link>
+          </nav>
+
           <div className="landing-header-tools">
+            <button
+              type="button"
+              className="aws-inspect-header-btn"
+              onClick={openAi}
+              title="Ask NammaFix AI Civic Copilot"
+            >
+              <Bot size={13} className="text-emerald-400" />
+              <span>Ask AI Copilot</span>
+            </button>
             <button
               type="button"
               className="aws-inspect-header-btn"
@@ -296,10 +577,10 @@ export default function Landing() {
               title="Inspect AWS Cloud Architecture"
             >
               <Zap size={13} className="text-amber-400" />
-              <span>AWS Architecture</span>
+              <span>AWS Cloud</span>
             </button>
             <div className="landing-header-note">
-              <span className="live-dot" /> Bharat Builds · Bangalore
+              <span className="live-dot" /> Bengaluru Live
             </div>
             <div className="language-picker" aria-label="Choose language">
               {(["en", "kn", "hi"] as Language[]).map((item) => (
@@ -346,87 +627,177 @@ export default function Landing() {
             </h1>
             <p className="hero-tagline">{copy.tagline}</p>
             <p className="hero-support">{copy.support}</p>
-            <div className="hero-actions">
+            <div className="hero-actions" style={{ flexWrap: "wrap", gap: "10px" }}>
+              <Link
+                href="/upload"
+                className="hero-cta"
+                onClick={goTo("/upload")}
+                style={{ textDecoration: "none", cursor: "pointer" }}
+              >
+                <Camera size={16} /> Report with Voice + Photo <ArrowRight size={16} />
+              </Link>
+              <Link
+                href="/track"
+                className="hero-cta-secondary"
+                onClick={goTo("/track")}
+                style={{ cursor: "pointer" }}
+              >
+                <Search size={14} /> Track by ID
+              </Link>
+              <Link
+                href="/dashboard"
+                className="hero-cta-secondary"
+                onClick={goTo("/dashboard")}
+                style={{ cursor: "pointer" }}
+              >
+                <TrendingUp size={14} /> Civic Trends & Ward Analytics
+              </Link>
               <button
                 type="button"
-                className="hero-cta"
-                onClick={enterDashboard}
-                disabled={enteringApp}
+                className="hero-cta-secondary"
+                onClick={openAi}
+                style={{ cursor: "pointer", background: "rgba(16, 185, 129, 0.15)", borderColor: "rgba(16, 185, 129, 0.4)" }}
               >
-                {copy.cta} <ArrowRight size={17} />
+                <Bot size={14} style={{ color: "#34d399" }} /> Ask AI Copilot
               </button>
-              <span className="hero-mvp">
-                <Activity size={13} /> {copy.scope}
-              </span>
             </div>
           </div>
 
           <div className="hero-console" aria-label="NammaFix live demo pipeline">
+            <style>{`
+              @keyframes timer-progress {
+                0% { width: 0%; }
+                100% { width: 100%; }
+              }
+            `}</style>
             <div className="console-top">
               <span>
-                <span className="console-live" /> {copy.live}
+                <span className="console-live" /> {copy.live} · 20s auto-rotation
               </span>
-              <span>{copy.complaint}</span>
+              <span>{activeDemo.complaint[language]}</span>
             </div>
-            <div className="console-photo">
-              <img src={heroImage} alt="Garbage pile incident in Bengaluru" />
-              <div className="console-photo-label">
-                <strong>{copy.garbage}</strong>
-                <span>{copy.location}</span>
-              </div>
+
+            {/* Quick Complaint Category Switcher with 20s Progress Bar */}
+            <div
+              className="console-switcher-bar"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "5px",
+                marginBottom: "12px",
+              }}
+            >
+              {DEMO_COMPLAINTS.map((item, idx) => {
+                const isSelected = idx === demoIndex;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectDemoComplaint(idx)}
+                    style={{
+                      position: "relative",
+                      overflow: "hidden",
+                      padding: "6px 2px 8px",
+                      borderRadius: "7px",
+                      border: isSelected ? "1px solid #10b981" : "1px solid rgba(13, 118, 106, 0.18)",
+                      background: isSelected ? "#0d766a" : "rgba(242, 252, 247, 0.9)",
+                      color: isSelected ? "#ffffff" : "#2d544c",
+                      fontSize: "9px",
+                      fontWeight: 750,
+                      cursor: "pointer",
+                      textAlign: "center",
+                      lineHeight: "1.2",
+                      transition: "all 0.2s ease",
+                    }}
+                    title={`View ${item.shortTitle} Complaint`}
+                  >
+                    <div>{item.shortTitle}</div>
+                    <div style={{ fontSize: "7.5px", opacity: 0.8, marginTop: "1px" }}>{item.id}</div>
+                    {isSelected && (
+                      <span
+                        key={`bar-${demoIndex}`}
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          height: "2.5px",
+                          background: "#34d399",
+                          animation: "timer-progress 20s linear forwards",
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <div className="console-caption">
-              <span className="console-caption-icon">
-                <Camera size={13} />
-              </span>
-              <span>{copy.caption}</span>
-            </div>
-            <div className="console-progress">
-              <div className="console-progress-head">
-                <span>{copy.pipeline}</span>
-                <span>{copy.complete}</span>
-              </div>
-              <div className="console-progress-line">
-                <span />
-              </div>
-            </div>
-            <div className="console-steps">
-              <div className="console-step complete">
-                <span>
-                  <Check size={12} />
-                </span>
-                <div>
-                  <strong>{copy.classified}</strong>
-                  <small>{copy.classifiedDetail}</small>
+
+            <div
+              style={{
+                opacity: isDemoFading ? 0.25 : 1,
+                transform: isDemoFading ? "scale(0.985)" : "scale(1)",
+                transition: "opacity 0.25s ease, transform 0.25s ease",
+              }}
+            >
+              <div className="console-photo">
+                <img src={activeDemo.photo} alt={activeDemo.category[language]} />
+                <div className="console-photo-label">
+                  <strong>{activeDemo.category[language]}</strong>
+                  <span>{activeDemo.location[language]}</span>
                 </div>
               </div>
-              <div className="console-step complete">
-                <span>
-                  <Check size={12} />
+              <div className="console-caption">
+                <span className="console-caption-icon">
+                  <Camera size={13} />
                 </span>
-                <div>
-                  <strong>{copy.duplicate}</strong>
-                  <small>{copy.duplicateDetail}</small>
+                <span>{activeDemo.caption[language]}</span>
+              </div>
+              <div className="console-progress">
+                <div className="console-progress-head">
+                  <span>{copy.pipeline}</span>
+                  <span>{activeDemo.complete[language]}</span>
+                </div>
+                <div className="console-progress-line">
+                  <span style={{ width: activeDemo.progressPercent }} />
                 </div>
               </div>
-              <div className="console-step active">
-                <span>
-                  <Route size={12} />
-                </span>
-                <div>
-                  <strong>{copy.routed}</strong>
-                  <small>{copy.routedDetail}</small>
+              <div className="console-steps">
+                <div className="console-step complete">
+                  <span>
+                    <Check size={12} />
+                  </span>
+                  <div>
+                    <strong>{copy.classified}</strong>
+                    <small>{activeDemo.classifiedDetail[language]}</small>
+                  </div>
+                </div>
+                <div className="console-step complete">
+                  <span>
+                    <Check size={12} />
+                  </span>
+                  <div>
+                    <strong>{copy.duplicate}</strong>
+                    <small>{activeDemo.duplicateDetail[language]}</small>
+                  </div>
+                </div>
+                <div className="console-step active">
+                  <span>
+                    <Route size={12} />
+                  </span>
+                  <div>
+                    <strong>{copy.routed}</strong>
+                    <small>{activeDemo.routedDetail[language]}</small>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="console-receipt">
-              <div>
-                <span>{copy.tracking}</span>
-                <strong>NM24 0042</strong>
-              </div>
-              <div className="receipt-language">
-                <Languages size={14} />
-                <span>{copy.language}</span>
+              <div className="console-receipt">
+                <div>
+                  <span>{copy.tracking}</span>
+                  <strong>{activeDemo.trackingId}</strong>
+                </div>
+                <div className="receipt-language">
+                  <Languages size={14} />
+                  <span>{copy.language}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -463,19 +834,131 @@ export default function Landing() {
         </div>
         <div className="context-stats">
           <div className="context-stat featured">
-            <span>Jan 2023 to Jun 2026</span>
+            <span>Bengaluru Citywide Annual Estimates (Illustrative)</span>
             <strong>7.81L</strong>
-            <small>complaints filed through Sahaaya</small>
+            <small>public municipal grievances recorded across city portals*</small>
           </div>
           <div className="context-stat">
             <AlertTriangle size={18} />
-            <strong>01</strong>
-            <small>duplicate case caught nearby</small>
+            <strong>Real-time</strong>
+            <small>duplicate cases caught within 500m radius</small>
           </div>
           <div className="context-stat">
             <CheckCircle2 size={18} />
-            <strong>01</strong>
-            <small>after photo required to close</small>
+            <strong>100%</strong>
+            <small>distinct after-photos required before resolution</small>
+          </div>
+        </div>
+        <p style={{ marginTop: "12px", fontSize: "11.5px", color: "#6b8078", fontStyle: "italic" }}>
+          * Historical public reference figures for Bengaluru civic grievance volume (illustrative context, not live app instances).
+        </p>
+      </section>
+
+      {/* Core Civic Capabilities Showcase Section */}
+      <section className="features-showcase-section">
+        <div className="features-showcase-header">
+          <span className="section-kicker">Integrated Civic Platform</span>
+          <h2>Explore All Civic Capabilities</h2>
+          <p>
+            From voice grievance capture in local dialects to real-time public tracking and AI copilot guidance,
+            every civic action is backed by transparent verification.
+          </p>
+        </div>
+
+        <div className="features-showcase-grid">
+          {/* Card 1: Audio & Voice Recording */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <Mic size={22} />
+            </div>
+            <span className="feature-card-tag">Citizen Input</span>
+            <h3 className="feature-card-title">Voice Note & Audio Evidence</h3>
+            <p className="feature-card-desc">
+              Speak in Kannada, English, or Hindi. Record real-time voice notes on the street to explain potholes, garbage, or water leaks without typing.
+            </p>
+            <Link href="/upload" className="feature-redirect-btn" onClick={goTo("/upload")}>
+              Record Audio & Report <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {/* Card 2: Public Tracking by ID */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <Search size={22} />
+            </div>
+            <span className="feature-card-tag">Transparency</span>
+            <h3 className="feature-card-title">Public Ticket Tracking & Feedback</h3>
+            <p className="feature-card-desc">
+              Lookup any complaint by ID (e.g. <code>cmp-027</code> or tracking code). View 3-stage progress, WhatsApp share links, and leave citizen comments.
+            </p>
+            <Link href="/track" className="feature-redirect-btn" onClick={goTo("/track")}>
+              Track Public Status <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {/* Card 3: Ward Analytics & Trend Charts */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <TrendingUp size={22} />
+            </div>
+            <span className="feature-card-tag">Analytics</span>
+            <h3 className="feature-card-title">Ward Volume Trends & Charts</h3>
+            <p className="feature-card-desc">
+              Explore interactive category trends and ward resolution breakdowns over 7, 14, and 30 days powered by dynamic Recharts visualizers.
+            </p>
+            <Link href="/dashboard" className="feature-redirect-btn" onClick={goTo("/dashboard")}>
+              View Trend Charts <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {/* Card 4: AI Civic Copilot */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <Bot size={22} />
+            </div>
+            <span className="feature-card-tag">Assistant</span>
+            <h3 className="feature-card-title">NammaFix AI Civic Copilot</h3>
+            <p className="feature-card-desc">
+              Have questions about BBMP Sakala SLAs, BWSSB water tanker contacts, or pothole compensation bylaws? Ask our streaming AI Copilot anytime.
+            </p>
+            <button
+              type="button"
+              className="feature-redirect-btn"
+              onClick={openAi}
+              style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, font: "inherit", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              Ask AI Assistant <ArrowRight size={14} />
+            </button>
+          </div>
+
+          {/* Card 5: Proof Verification */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <Camera size={22} />
+            </div>
+            <span className="feature-card-tag">Verification</span>
+            <h3 className="feature-card-title">Before / After Proof Verification</h3>
+            <p className="feature-card-desc">
+              Inspect Rekognition computer vision comparison. Citizens inspect work evidence with an interactive slider before closing the ticket.
+            </p>
+            <Link href="/resolution/cmp-027" className="feature-redirect-btn" onClick={goTo("/resolution/cmp-027")}>
+              Inspect Proof Demo <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {/* Card 6: Municipal Data Export */}
+          <div className="feature-showcase-card">
+            <div className="feature-card-icon">
+              <Download size={22} />
+            </div>
+            <span className="feature-card-tag">Open Data</span>
+            <h3 className="feature-card-title">Municipal CSV Data Export</h3>
+            <p className="feature-card-desc">
+              Download clean municipal incident data for RTI audits, ward committee meetings, and BBMP grievance record keeping with one click.
+            </p>
+            <Link href="/dashboard" className="feature-redirect-btn" onClick={goTo("/dashboard")}>
+              Open Dashboard Export <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </section>
@@ -544,10 +1027,10 @@ export default function Landing() {
           </div>
           <BeforeAfterSlider
             beforeImage={proofScenario === "pothole" ? images.potholeTwo : images.garbageOne}
-            afterImage={images.cleanStreet}
+            afterImage={proofScenario === "pothole" ? images.potholeAfter : images.garbageAfter}
             beforeLabel={proofScenario === "pothole" ? "BEFORE · POTHOLE HAZARD" : "BEFORE · GARBAGE DUMP"}
-            afterLabel="AFTER · RESOLVED STREET"
-            aspectRatio="16 / 11"
+            afterLabel={proofScenario === "pothole" ? "AFTER · REPAIRED ASPHALT" : "AFTER · CLEARED SIDEWALK"}
+            aspectRatio="16 / 10"
           />
         </div>
       </section>
@@ -577,7 +1060,18 @@ export default function Landing() {
         <span>© 2026 NammaFix AI</span>
         <span className="footer-divider" />
         <span>Built for the streets of Bengaluru</span>
-        <Link href="/upload">
+        <div style={{ display: "flex", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
+          <Link href="/upload" onClick={goTo("/upload")} style={{ color: "rgba(255, 255, 255, 0.75)", textDecoration: "none", fontSize: "12px", cursor: "pointer" }}>
+            Report Issue
+          </Link>
+          <Link href="/track" onClick={goTo("/track")} style={{ color: "rgba(255, 255, 255, 0.75)", textDecoration: "none", fontSize: "12px", cursor: "pointer" }}>
+            Track by ID
+          </Link>
+          <Link href="/dashboard" onClick={goTo("/dashboard")} style={{ color: "rgba(255, 255, 255, 0.75)", textDecoration: "none", fontSize: "12px", cursor: "pointer" }}>
+            Civic Trends
+          </Link>
+        </div>
+        <Link href="/upload" onClick={goTo("/upload")} style={{ cursor: "pointer" }}>
           Enter the app <ChevronRight size={14} />
         </Link>
       </footer>

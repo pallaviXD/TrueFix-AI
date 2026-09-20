@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  NammaFix AI — Civic Action Agent Pipeline
+  Serverless Application Model (SAM) configuration for local testing and AWS deployment.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        STAGE: local
+        APP_NAME: nammafix-ai
+        BBMP_DELIMITATION_YEAR: "2023"
+
+Resources:
+  # ==============================================================================
+  # 1. Voice Transcription Lambda (SAM Local / Amazon Transcribe Bridge)
+  # ==============================================================================
+  TranscribeAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./sam/handlers/
+      Handler: transcribe.handler
+      Description: Transcribes citizen voice notes into English and Kannada text
+      Events:
+        TranscribeApi:
+          Type: Api
+          Properties:
+            Path: /voice/transcribe
+            Method: post
+
+  # ==============================================================================
+  # 2. Ward Routing & Cedar Policy Validation Lambda
+  # ==============================================================================
+  RouteReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./sam/handlers/
+      Handler: route.handler
+      Description: Point-in-polygon 225-ward assignment with Cedar authorization
+      Events:
+        RouteApi:
+          Type: Api
+          Properties:
+            Path: /reports/route
+            Method: post
+
+  # ==============================================================================
+  # 3. Resolution Verification & Rekognition Comparison Lambda
+  # ==============================================================================
+  VerifyResolutionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./sam/handlers/
+      Handler: verify.handler
+      Description: Compares before and after evidence with anti-fraud safeguards
+      Events:
+        VerifyApi:
+          Type: Api
+          Properties:
+            Path: /reports/verify
+            Method: post
+
+Outputs:
+  TranscribeApiEndpoint:
+    Description: "API Gateway endpoint URL for Transcribe Lambda"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/voice/transcribe"
+  RouteApiEndpoint:
+    Description: "API Gateway endpoint URL for Ward Routing Lambda"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/reports/route"
+  VerifyApiEndpoint:
+    Description: "API Gateway endpoint URL for Resolution Verification Lambda"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/reports/verify"

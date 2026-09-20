@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, CheckCircle2, CircleAlert, Filter, Route as RouteIcon, Trash2, Wrench } from "lucide-react";
+import { ArrowUpRight, AudioLines, CheckCircle2, CircleAlert, Download, Filter, Route as RouteIcon, Search, Trash2, TrendingUp, Wrench } from "lucide-react";
 import { Link } from "wouter";
 import { api, Complaint, ComplaintStatus } from "@/lib/api";
 import { EmptyNotice, ErrorNotice, LoadingSteps, PageIntro, SectionLabel } from "@/App";
+import { TrendCharts } from "@/components/TrendCharts";
 
 const statusMeta: Record<ComplaintStatus, { className: string; icon: typeof CheckCircle2 }> = {
   Submitted: { className: "status-submitted", icon: CircleAlert },
@@ -21,9 +22,77 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 }
 
+function csvEscape(value: unknown) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function exportReportsCsv(reports: Complaint[]) {
+  const headers = [
+    "Tracking ID",
+    "Complaint ID",
+    "Category",
+    "Status",
+    "Title",
+    "Ward",
+    "Department",
+    "Location",
+    "Latitude",
+    "Longitude",
+    "Confidence",
+    "Created Date",
+    "Has Voice Note",
+  ];
+  const rows = reports.map((c) => [
+    c.trackingId,
+    c.id,
+    c.category,
+    c.status,
+    c.title,
+    c.ward,
+    c.department,
+    c.location,
+    c.coordinates.lat,
+    c.coordinates.lng,
+    `${(c.confidence * 100).toFixed(0)}%`,
+    c.createdAt,
+    c.audioUrl ? "Yes" : "No",
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map((r) => r.map(csvEscape).join(","))
+    .join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `nammafix-civic-reports-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function getCategoryMeta(cat: string) {
+  if (cat === "pothole" || /pothole|road|crater/i.test(cat || "")) {
+    return categoryMeta.pothole;
+  }
+  return categoryMeta.garbage;
+}
+
+function getStatusMeta(status: string) {
+  if (statusMeta[status as ComplaintStatus]) {
+    return statusMeta[status as ComplaintStatus];
+  }
+  const s = String(status || "").toLowerCase();
+  if (s.includes("review")) return statusMeta["Needs Review"];
+  if (s.includes("rout") || s.includes("progress")) return statusMeta.Routed;
+  if (s.includes("resolv") || s.includes("fix")) return statusMeta.Resolved;
+  if (s.includes("disput")) return statusMeta.Disputed;
+  return statusMeta.Submitted;
+}
+
 function ComplaintCard({ complaint }: { complaint: Complaint }) {
-  const category = categoryMeta[complaint.category];
-  const status = statusMeta[complaint.status];
+  const category = getCategoryMeta(complaint.category);
+  const status = getStatusMeta(complaint.status);
   const CategoryIcon = category.icon;
   const StatusIcon = status.icon;
   return (
@@ -38,6 +107,11 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
         <p className="complaint-meta">{complaint.ward} <span>·</span> {complaint.department.replace("BBMP ", "")}</p>
         <div className="complaint-footer">
           <span className={`status-badge ${status.className}`}><StatusIcon size={12} /> {complaint.status}</span>
+          {complaint.audioUrl ? (
+            <span className="audio-badge" title="Citizen voice note attached">
+              <AudioLines size={11} /> Voice note
+            </span>
+          ) : null}
           {complaint.duplicateOf ? <span className="duplicate-flag">Possible duplicate</span> : null}
         </div>
       </div>
@@ -51,6 +125,7 @@ export default function Dashboard() {
   const [filter, setFilter] = useState<"all" | "garbage" | "pothole">("all");
   const [wardFilter, setWardFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCharts, setShowCharts] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -88,6 +163,28 @@ export default function Dashboard() {
 
   return (
     <div className="wide-page dashboard-page">
+      {/* Operational Demonstration Disclosure Banner */}
+      <div
+        style={{
+          background: "rgba(16, 185, 129, 0.08)",
+          border: "1px solid rgba(16, 185, 129, 0.25)",
+          borderRadius: "12px",
+          padding: "10px 16px",
+          fontSize: "12px",
+          color: "#134e40",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "20px",
+          lineHeight: "1.4",
+        }}
+      >
+        <span style={{ fontSize: "15px" }}>ℹ️</span>
+        <span>
+          <strong>Operational Demonstration View:</strong> Displaying civic reports stored in local SQLite database with Cedar policy enforcement. This environment is an offline prototype and is not connected to the live BBMP Sahaya production backend.
+        </span>
+      </div>
+
       {/* Citizen Karma Banner */}
       <div style={{ background: "linear-gradient(135deg, #09201b, #11362e)", border: "1px solid rgba(52, 211, 153, 0.25)", borderRadius: "16px", padding: "18px 24px", color: "#e6f5ef", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -131,6 +228,38 @@ export default function Dashboard() {
         <div className="metric-card"><span className="metric-label">In progress</span><strong>{active.toString().padStart(2, "0")}</strong><span className="metric-foot"><span className="metric-dot dot-teal" /> Active with civic teams</span></div>
         <div className="metric-card"><span className="metric-label">Verified fixed</span><strong>{resolved.toString().padStart(2, "0")}</strong><span className="metric-foot"><span className="metric-dot dot-sage" /> Photo-checked by you</span></div>
       </div>
+
+      {/* Analytics & Export Toolbar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", margin: "20px 0 16px" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ padding: "6px 12px", fontSize: "11px" }}
+            onClick={() => setShowCharts((prev) => !prev)}
+          >
+            <TrendingUp size={13} className="text-emerald-500" />
+            <span>{showCharts ? "Hide Trends" : "Show Civic Trends"}</span>
+          </button>
+          <Link href="/track" className="secondary-button" style={{ padding: "6px 12px", fontSize: "11px" }}>
+            <Search size={13} />
+            <span>Public Tracking</span>
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className="secondary-button"
+          style={{ padding: "6px 14px", fontSize: "11px" }}
+          onClick={() => exportReportsCsv(filtered)}
+          title="Download CSV for BBMP field engineers"
+        >
+          <Download size={13} className="text-teal-600" />
+          <span>Export CSV ({filtered.length})</span>
+        </button>
+      </div>
+
+      {showCharts && <TrendCharts complaints={complaints} />}
 
       {error ? <ErrorNotice message={error} /> : null}
 

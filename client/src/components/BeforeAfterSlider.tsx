@@ -87,18 +87,14 @@ export function BeforeAfterSlider({
       {/* Before image (clipped layer) */}
       <div
         className="absolute inset-0 overflow-hidden pointer-events-none"
-        style={{ width: `${sliderPosition}%` }}
+        style={{
+          clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
+        }}
       >
         <img
           src={beforeImage}
           alt="Before resolution"
-          className="absolute inset-0 w-full h-full object-cover max-w-none pointer-events-none"
-          style={{
-            width: containerRef.current
-              ? `${containerRef.current.clientWidth}px`
-              : "100%",
-            height: "100%",
-          }}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
         {/* Before label */}
         <div className="slider-label-before absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-amber-950/85 backdrop-blur-md text-amber-200 text-[11px] font-bold tracking-wider uppercase border border-amber-500/30 shadow-lg pointer-events-none">

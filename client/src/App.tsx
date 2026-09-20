@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation } from "wouter";
-import { AlertCircle, ArrowLeft, Check, ClipboardList, ChevronRight, Plus, ShieldCheck, Zap } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, Check, ClipboardList, ChevronRight, Plus, Search, ShieldCheck, Zap } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -10,15 +10,21 @@ import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
 import Result from "./pages/Result";
 import Resolution from "./pages/Resolution";
+import Tracking from "./pages/Tracking";
 import NotFound from "./pages/NotFound";
 import { AwsArchitectureDrawer } from "./components/AwsArchitectureDrawer";
+import { CivicAiAssistant } from "./components/CivicAiAssistant";
 import { CivicTicker } from "./components/CivicTicker";
 
 export const AwsDrawerContext = createContext<{ openDrawer: () => void }>({ openDrawer: () => {} });
 export const useAwsDrawer = () => useContext(AwsDrawerContext);
 
+export const CivicAiContext = createContext<{ openAi: () => void }>({ openAi: () => {} });
+export const useCivicAi = () => useContext(CivicAiContext);
+
 const navItems = [
   { href: "/upload", label: "Report", icon: Plus },
+  { href: "/track", label: "Track", icon: Search },
   { href: "/dashboard", label: "My reports", icon: ClipboardList },
 ];
 
@@ -36,7 +42,10 @@ function LogoMark() {
 function AppHeader() {
   const [location] = useLocation();
   const isDashboard = location.startsWith("/dashboard");
+  const isTrack = location.startsWith("/track");
+  const isUpload = location.startsWith("/upload");
   const { openDrawer } = useAwsDrawer();
+  const { openAi } = useCivicAi();
 
   return (
     <header className="site-header">
@@ -46,15 +55,20 @@ function AppHeader() {
           <span><strong>NammaFix</strong><small>AI / civic action</small></span>
         </Link>
         <nav className="desktop-nav" aria-label="Primary navigation">
-          <Link href="/upload" className={!isDashboard ? "active" : ""}>Report an issue</Link>
+          <Link href="/upload" className={isUpload ? "active" : ""}>Report an issue</Link>
+          <Link href="/track" className={isTrack ? "active" : ""}>Track report</Link>
           <Link href="/dashboard" className={isDashboard ? "active" : ""}>My reports</Link>
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <button type="button" className="aws-inspect-header-btn" onClick={openAi} title="Ask NammaFix AI Civic Copilot">
+            <Bot size={13} className="text-emerald-400" />
+            <span>Ask AI</span>
+          </button>
           <button type="button" className="aws-inspect-header-btn" onClick={openDrawer} title="Inspect AWS Cloud Architecture">
             <Zap size={13} className="text-amber-400" />
-            <span>AWS Architecture</span>
+            <span>AWS Cloud</span>
           </button>
-          <div className="header-status" title="Bharat Builds Tour 2026"><span className="status-pulse" /><span>Bengaluru</span></div>
+          <div className="header-status" title="Bengaluru Civic Operations"><span className="status-pulse" /><span>Bengaluru</span></div>
         </div>
       </div>
     </header>
@@ -97,26 +111,47 @@ export function TrustNote({ children }: { children: React.ReactNode }) { return 
 function UtilityRoutes() {
   const [, navigate] = useLocation();
   useEffect(() => { if (window.location.pathname === "/") navigate("/", { replace: true }); }, [navigate]);
-  return <PageFrame><Switch><Route path="/upload" component={Upload} /><Route path="/dashboard" component={Dashboard} /><Route path="/complaint/:id" component={Result} /><Route path="/resolution/:id" component={Resolution} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch></PageFrame>;
+  return (
+    <PageFrame>
+      <Switch>
+        <Route path="/upload" component={Upload} />
+        <Route path="/track" component={Tracking} />
+        <Route path="/tracking" component={Tracking} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/complaint/:id" component={Result} />
+        <Route path="/resolution/:id" component={Resolution} />
+        <Route path="/404" component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </PageFrame>
+  );
 }
 
 export function App() {
   const [isAwsDrawerOpen, setIsAwsDrawerOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
+
   const openDrawer = () => setIsAwsDrawerOpen(true);
   const closeDrawer = () => setIsAwsDrawerOpen(false);
+
+  const openAi = () => setIsAiOpen(true);
+  const closeAi = () => setIsAiOpen(false);
 
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <AwsDrawerContext.Provider value={{ openDrawer }}>
-            <Toaster />
-            <Switch>
-              <Route path="/" component={Landing} />
-              <Route path="/welcome" component={Landing} />
-              <Route component={UtilityRoutes} />
-            </Switch>
-            <AwsArchitectureDrawer isOpen={isAwsDrawerOpen} onClose={closeDrawer} />
+            <CivicAiContext.Provider value={{ openAi }}>
+              <Toaster />
+              <Switch>
+                <Route path="/" component={Landing} />
+                <Route path="/welcome" component={Landing} />
+                <Route component={UtilityRoutes} />
+              </Switch>
+              <AwsArchitectureDrawer isOpen={isAwsDrawerOpen} onClose={closeDrawer} />
+              <CivicAiAssistant isOpen={isAiOpen} onClose={closeAi} />
+            </CivicAiContext.Provider>
           </AwsDrawerContext.Provider>
         </TooltipProvider>
       </ThemeProvider>

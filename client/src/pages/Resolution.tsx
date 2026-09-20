@@ -2,8 +2,10 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, Camera, Check, CheckCircle2, ChevronLeft, ImagePlus, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, UploadCloud } from "lucide-react";
 import { Link, useLocation, useRoute } from "wouter";
 import { api, Complaint, images } from "@/lib/api";
+import { compareBeforeAfterEvidence } from "../../../shared/truefix";
 import { ErrorNotice, LoadingSteps, PageIntro, SectionLabel, TrustNote } from "@/App";
 import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
+import { AudioPlayer } from "@/components/AudioPlayer";
 
 const resolutionSteps = ["Uploading after photo…", "Checking before / after evidence…", "Updating complaint status…"];
 
@@ -45,6 +47,13 @@ export default function Resolution() {
 
   const saveProof = async () => {
     if (!complaint || !afterPhoto) return;
+
+    const comparison = compareBeforeAfterEvidence(complaint.photo, afterPhoto);
+    if (!comparison.isValidProof) {
+      setError(comparison.reason);
+      return;
+    }
+
     setError("");
     setSavingStep(0);
     setSaving(true);
@@ -54,9 +63,9 @@ export default function Resolution() {
       setComplaint(updated);
       setSaving(false);
       setConfirmed(true);
-    } catch {
+    } catch (err: any) {
       setSaving(false);
-      setError("The evidence could not be saved. Please try once more.");
+      setError(err?.message || "The evidence could not be saved. Please try once more.");
     }
   };
 
@@ -107,14 +116,22 @@ export default function Resolution() {
               afterLabel="AFTER · CURRENT STATUS"
               aspectRatio="16 / 10"
             />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "11px", color: "#10b981", fontWeight: "700", display: "flex", alignItems: "center", gap: "5px" }}>
-                <ShieldCheck size={14} /> Amazon Rekognition Verified (94% confidence)
-              </span>
-              <button type="button" className="photo-change" style={{ background: "#064e3b" }} onClick={() => fileInputRef.current?.click()}>
-                Change After Photo
-              </button>
-            </div>
+            {(() => {
+              const comp = compareBeforeAfterEvidence(complaint.photo, afterPhoto);
+              return (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <span style={{ fontSize: "11px", color: comp.isValidProof ? "#10b981" : "#ef4444", fontWeight: "700", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <ShieldCheck size={14} />
+                    {comp.isValidProof
+                      ? `CV Verified: Physical site change confirmed (${Math.round((1 - comp.similarity) * 100)}% visual diff)`
+                      : `Verification Rejected: ${comp.reason}`}
+                  </span>
+                  <button type="button" className="photo-change" style={{ background: comp.isValidProof ? "#064e3b" : "#dc2626" }} onClick={() => fileInputRef.current?.click()}>
+                    Change After Photo
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <div style={{ marginTop: "12px" }}>
@@ -134,9 +151,30 @@ export default function Resolution() {
 
         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={handlePhoto} />
         {!afterPhoto ? (
-          <button type="button" className="sample-after-button" onClick={() => setAfterPhoto(images.cleanStreet)}>
-            <UploadCloud size={14} /> Use verified sample clean street photo
+          <button
+            type="button"
+            className="sample-after-button"
+            onClick={() =>
+              setAfterPhoto(complaint.category === "pothole" ? images.potholeAfter : images.garbageAfter)
+            }
+          >
+            <UploadCloud size={14} /> Use verified sample {complaint.category === "pothole" ? "repaired road" : "cleared area"} photo
           </button>
+        ) : null}
+
+        {complaint.audioUrl ? (
+          <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #d4e7e0" }}>
+            <span style={{ fontSize: "11px", fontWeight: "700", color: "#52746d", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: "6px" }}>
+              Original Voice Evidence
+            </span>
+            <AudioPlayer
+              url={complaint.audioUrl}
+              duration={complaint.audioDuration || 8}
+              transcript={complaint.audioTranscript}
+              transcriptKannada={complaint.audioTranscriptKannada}
+              title="Reporter's Voice Note"
+            />
+          </div>
         ) : null}
       </section>
 
