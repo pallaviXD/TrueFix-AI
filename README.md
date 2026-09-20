@@ -221,14 +221,5 @@ npx tsc --noEmit
 
 ---
 
-## 👥 Contributors & Acknowledgements
-
-- **Ansika Singh** ([@Ansika2004](https://github.com/Ansika2004))
-- **Pallavi** ([@pallaviXD](https://github.com/pallaviXD))
-
-Built with pride for **Karnataka and the citizens of Bengaluru** during the **AWS × WeMakeDevs "First Commit" Hackathon (Build It Track)**.
-
----
-
 ## 📄 License
 This project is open-source under the [MIT License](LICENSE).
