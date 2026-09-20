@@ -1,4 +1,4 @@
-# NammaFix AI (ನಮ್ಮ ಫಿಕ್ಸ್) — Civic Action & Proof-Guarded Resolution Agent for Bengaluru
+# NammaFix AI (ನಮ್ಮ ಫಿಕ್ಸ್) - Civic Action & Proof-Guarded Resolution Agent for Bengaluru
 
 [![Build Status](https://img.shields.io/badge/tests-43%20passed-brightgreen)](https://github.com/pallaviXD/NammaFix-AI)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
