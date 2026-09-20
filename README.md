@@ -69,26 +69,26 @@ NammaFix AI is engineered to run **completely offline and free locally** for jud
 ```mermaid
 flowchart TD
     subgraph Client ["Citizen Frontend (React + Vite)"]
-        UI[PWA / Mobile Web Interface]
-        Geo[Browser Geolocation API]
-        Audio[MediaRecorder Voice Capture]
+        UI["PWA / Mobile Web Interface"]
+        Geo["Browser Geolocation API"]
+        Audio["MediaRecorder Voice Capture"]
     end
 
     subgraph AWS ["AWS Cloud Architecture (Production Blueprint)"]
-        APIGW[Amazon API Gateway]
-        AVP[Amazon Verified Permissions (Cedar Policy Engine)]
+        APIGW["Amazon API Gateway"]
+        AVP["Amazon Verified Permissions (Cedar Policy Engine)"]
         
         subgraph Lambdas ["Serverless Functions (SAM Local)"]
-            L1[Voice Transcribe Lambda]
-            L2[Ward Route & GIS Lambda]
-            L3[Verify Resolution Lambda]
+            L1["Voice Transcribe Lambda"]
+            L2["Ward Route & GIS Lambda"]
+            L3["Verify Resolution Lambda"]
         end
 
-        S3[Amazon S3 (Evidence Media Bucket)]
-        Transcribe[Amazon Transcribe (Kannada & English Models)]
-        Rekognition[Amazon Rekognition (Before/After CV Comparison)]
-        OpenSearch[Amazon OpenSearch Service (Geo-Radius & Duplicate Detection)]
-        DB[(Amazon Aurora Serverless / SQLite Local)]
+        S3["Amazon S3 (Evidence Media Bucket)"]
+        Transcribe["Amazon Transcribe (Kannada & English Models)"]
+        Rekognition["Amazon Rekognition (Before/After CV Comparison)"]
+        OpenSearch["Amazon OpenSearch Service (Geo-Radius & Duplicate Detection)"]
+        DB["Amazon Aurora Serverless / SQLite Local"]
     end
 
     UI -->|HTTPS Request| APIGW

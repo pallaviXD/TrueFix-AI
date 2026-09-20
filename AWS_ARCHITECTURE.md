@@ -84,26 +84,26 @@ This document provides a transparent, technically honest audit and mapping of th
 ```mermaid
 flowchart TD
     subgraph Client ["Citizen Frontend (React + Vite)"]
-        UI[PWA / Mobile Web]
-        Geo[Browser Geolocation API]
-        Audio[MediaRecorder API]
+        UI["PWA / Mobile Web"]
+        Geo["Browser Geolocation API"]
+        Audio["MediaRecorder API"]
     end
 
     subgraph AWS ["AWS Cloud Architecture"]
-        APIGW[Amazon API Gateway]
-        AVP[Amazon Verified Permissions (Cedar)]
+        APIGW["Amazon API Gateway"]
+        AVP["Amazon Verified Permissions (Cedar)"]
         
         subgraph Lambdas ["Serverless Functions (SAM)"]
-            L1[Transcribe Function]
-            L2[Ward Route Function]
-            L3[Verify Resolution Function]
+            L1["Transcribe Function"]
+            L2["Ward Route Function"]
+            L3["Verify Resolution Function"]
         end
 
-        S3[Amazon S3 (Evidence Media)]
-        Transcribe[Amazon Transcribe (Kannada/English)]
-        Rekognition[Amazon Rekognition (CV Comparison)]
-        OpenSearch[Amazon OpenSearch (Geo-Radius & Duplicates)]
-        Aurora[Amazon Aurora PostgreSQL / SQLite Local]
+        S3["Amazon S3 (Evidence Media)"]
+        Transcribe["Amazon Transcribe (Kannada/English)"]
+        Rekognition["Amazon Rekognition (CV Comparison)"]
+        OpenSearch["Amazon OpenSearch (Geo-Radius & Duplicates)"]
+        Aurora["Amazon Aurora PostgreSQL / SQLite Local"]
     end
 
     UI -->|HTTPS| APIGW
